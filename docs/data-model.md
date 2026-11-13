@@ -1,0 +1,104 @@
+# Initial data model
+
+PostgreSQL is the system of record. Use UUID primary keys, UTC timestamps, foreign keys, and indexes on common ownership and lookup paths. Store original file bytes in object storage; retain only the object key and metadata in PostgreSQL.
+
+```mermaid
+erDiagram
+  USERS ||--o{ WORKSPACE_MEMBERS : joins
+  WORKSPACES ||--o{ WORKSPACE_MEMBERS : contains
+  WORKSPACES ||--o{ DOCUMENTS : owns
+  USERS ||--o{ DOCUMENTS : uploads
+  DOCUMENTS ||--o{ CHUNKS : produces
+  WORKSPACES ||--o{ CONVERSATIONS : contains
+  USERS ||--o{ CONVERSATIONS : starts
+  CONVERSATIONS ||--o{ MESSAGES : contains
+  MESSAGES ||--o{ MESSAGE_SOURCES : cites
+  CHUNKS ||--o{ MESSAGE_SOURCES : supports
+  MESSAGES ||--o{ FEEDBACK : receives
+
+  USERS {
+    uuid id PK
+    string email UK
+    string password_hash
+    string display_name
+    datetime created_at
+  }
+  WORKSPACES {
+    uuid id PK
+    string name
+    uuid created_by FK
+    datetime created_at
+  }
+  WORKSPACE_MEMBERS {
+    uuid workspace_id PK,FK
+    uuid user_id PK,FK
+    string role
+    datetime joined_at
+  }
+  DOCUMENTS {
+    uuid id PK
+    uuid workspace_id FK
+    uuid uploaded_by FK
+    string filename
+    string content_type
+    bigint size_bytes
+    string object_key
+    string status
+    string error_summary
+    datetime created_at
+    datetime updated_at
+  }
+  CHUNKS {
+    uuid id PK
+    uuid document_id FK
+    uuid workspace_id FK
+    int ordinal
+    int page_start
+    int page_end
+    text content
+    vector embedding
+    datetime created_at
+  }
+  CONVERSATIONS {
+    uuid id PK
+    uuid workspace_id FK
+    uuid user_id FK
+    string title
+    datetime created_at
+  }
+  MESSAGES {
+    uuid id PK
+    uuid conversation_id FK
+    string role
+    text content
+    string answer_status
+    datetime created_at
+  }
+  MESSAGE_SOURCES {
+    uuid message_id PK,FK
+    uuid chunk_id PK,FK
+    float relevance_score
+  }
+  FEEDBACK {
+    uuid id PK
+    uuid message_id FK
+    uuid user_id FK
+    int rating
+    text comment
+    datetime created_at
+  }
+```
+
+## Constraints and indexes to implement
+
+- Unique normalized email for each user.
+- One membership row per `(workspace_id, user_id)`; roles initially `owner`, `editor`, and `viewer`.
+- One chunk ordinal per document; `page_start` and `page_end` are nullable for formats without reliable pages.
+- Restrict message roles to `user` and `assistant`; constrain feedback ratings to the selected range.
+- Index workspace IDs on documents, chunks, and conversations. Add a pgvector index only after choosing the distance operator and validating it with representative data.
+- Ensure source links can only reference chunks belonging to the conversation's workspace; enforce through service validation and, if practical, composite database constraints.
+- Use Alembic migrations for all schema changes.
+
+## Notes
+
+This is an initial logical model. Exact deletion behavior, retention, chunk vector dimension, and whether to normalize source citations further should be decided before the first production migration.
