@@ -24,8 +24,10 @@ flowchart LR
 2. It validates PDF/DOCX structure and size, stores the original in a private bucket, creates a `documents` row with `queued` status, and enqueues an ingestion job.
 3. A Celery worker downloads the object, extracts PDF or DOCX text, and marks the document `processing`.
 4. Extracted source units are stored in PostgreSQL. PDF units preserve the 1-based page number; DOCX is stored as one unit without a page number.
-5. Chunking and embeddings will be added after source extraction, keeping the ingestion stages independently testable.
-6. Invalid input produces a safe, user-visible `failed` status. Transient storage/worker failures retry with backoff and become failed after the retry limit.
+5. Each page/source unit is split into overlapping tokenizer windows. The embedding model creates normalized vectors, which are stored with document, workspace, page, and model metadata in pgvector.
+6. Invalid input or permanent model configuration errors produce a safe, user-visible `failed` status. Transient storage/model download failures retry with backoff and become failed after the retry limit.
+
+The initial search uses exact cosine-distance ordering in PostgreSQL. Add an approximate vector index only after measuring corpus size, filtered recall, and query latency; workspace filters must remain part of every retrieval query.
 
 ## Question answering
 

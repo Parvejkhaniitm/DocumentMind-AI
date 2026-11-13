@@ -10,6 +10,8 @@ erDiagram
   WORKSPACES ||--o{ DOCUMENTS : owns
   USERS ||--o{ DOCUMENTS : uploads
   DOCUMENTS ||--o{ DOCUMENT_PAGES : extracts
+  DOCUMENTS ||--o{ CHUNKS : indexes
+  DOCUMENT_PAGES ||--o{ CHUNKS : cites
   DOCUMENTS ||--o{ CHUNKS : produces
   WORKSPACES ||--o{ CONVERSATIONS : contains
   USERS ||--o{ CONVERSATIONS : starts
@@ -66,6 +68,17 @@ erDiagram
     int source_index
     int page_number
     text text
+  }
+  CHUNKS {
+    uuid id PK
+    uuid document_id FK
+    uuid workspace_id FK
+    uuid document_page_id FK
+    int ordinal
+    text content
+    vector embedding
+    string embedding_model
+    datetime created_at
   }
   CHUNKS {
     uuid id PK

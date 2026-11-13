@@ -4,6 +4,7 @@ from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+EMBEDDING_DIMENSION = 384
 
 
 class Settings(BaseSettings):
@@ -20,6 +21,10 @@ class Settings(BaseSettings):
     max_docx_uncompressed_bytes: int = Field(default=100 * 1024 * 1024, gt=0)
     max_pdf_pages: int = Field(default=500, gt=0, le=5000)
     max_extracted_text_chars: int = Field(default=5_000_000, gt=0)
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    embedding_chunk_tokens: int = Field(default=220, gt=0, le=240)
+    embedding_chunk_overlap: int = Field(default=40, ge=0, lt=220)
+    embedding_batch_size: int = Field(default=32, gt=0, le=128)
     jwt_secret: SecretStr | None = None
     access_token_minutes: int = Field(default=15, gt=0, le=60)
     refresh_token_days: int = Field(default=30, gt=0, le=90)

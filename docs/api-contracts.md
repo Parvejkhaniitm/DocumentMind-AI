@@ -42,13 +42,14 @@ Workspace creation automatically adds the creator as owner. Membership managemen
 | Method | Path | Purpose |
 | --- | --- | --- |
 | POST | `/workspaces/{workspace_id}/documents` | Upload PDF or DOCX as multipart form data |
+| POST | `/workspaces/{workspace_id}/documents/{document_id}/reprocess` | Re-extract and re-index a failed/ready document |
 | GET | `/workspaces/{workspace_id}/documents` | List authorized workspace documents |
 | GET | `/workspaces/{workspace_id}/documents/{document_id}` | Read metadata and processing status |
 | DELETE | `/workspaces/{workspace_id}/documents/{document_id}` | Remove a document and schedule file/chunk cleanup |
 
 Upload accepts a multipart field named `upload`, requires the owner/editor role, validates PDF/DOCX file structure, and returns `202 Accepted` with document metadata and a processing status. A successful response means the ingestion job was queued, not that extraction has completed. The initial default file limit is 20 MiB (plus bounded multipart framing); size and page limits are configurable. Current statuses are `queued`, `processing`, `ready`, `failed`, and `deleting`. Members can list and read document metadata; owners and editors can delete documents. Original objects remain private in S3-compatible storage.
 
-The worker extracts selectable PDF text with page numbers and DOCX text in document order. DOCX source units do not have a page number. Scanned PDFs fail with a clear status because OCR is not implemented yet. Extracted text is stored as source units for the next chunking milestone; no embeddings or question answering are generated yet.
+The worker extracts selectable PDF text with page numbers and DOCX text in document order. DOCX source units do not have a page number. Scanned PDFs fail with a clear status because OCR is not implemented yet. Extracted source units are retained with page references and indexed as overlapping chunks with normalized embeddings. Reprocessing rebuilds both page text and chunk vectors using the currently configured model.
 
 ## Search and chat
 
@@ -61,7 +62,9 @@ The worker extracts selectable PDF text with page numbers and DOCX text in docum
 | POST | `/workspaces/{workspace_id}/conversations/{conversation_id}/messages` | Ask a question and receive a grounded answer |
 | POST | `/workspaces/{workspace_id}/messages/{message_id}/feedback` | Submit answer feedback |
 
-Search request: `{ "query": "…", "document_ids": [], "limit": 10 }`. Search response items include chunk text, document ID/name, page range, and a relevance score.
+Search request: `{ "query": "…", "document_ids": [], "limit": 10 }`. Search response items include chunk text, document ID/name, source index, page number when available, and a cosine-similarity score.
+
+The implementation accepts a query, optional document UUID filters, and a result limit from 1–20. It embeds the query with the configured model, then ranks chunks by cosine similarity. Results include document name, chunk text, source index, and page number when available. Search checks workspace membership and restricts retrieval to ready documents whose stored embedding model matches the configured model. Model input length is validated before embedding; no answer generation or cross-encoder reranking is implemented yet.
 
 Question request: `{ "content": "…" }`. Response shape:
 

@@ -196,3 +196,42 @@ def delete_document(
     db.delete(document)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{document_id}/reprocess", response_model=DocumentRead, status_code=status.HTTP_202_ACCEPTED)
+def reprocess_document(
+    document_id: UUID,
+    workspace_id: UUID,
+    db: CurrentDb,
+    user: CurrentUser,
+) -> Document:
+    _require_editor_role(db, workspace_id, user.id)
+    document = db.scalar(
+        select(Document).where(
+            Document.id == document_id,
+            Document.workspace_id == workspace_id,
+        )
+    )
+    if document is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+    if document.status in {"queued", "processing", "deleting"}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Document cannot be reprocessed while another job is active.",
+        )
+
+    document.status = "queued"
+    document.error_summary = None
+    db.commit()
+    try:
+        process_document.delay(str(document.id))
+    except Exception as exc:
+        document.status = "failed"
+        document.error_summary = "Processing could not be queued. Check the worker service and retry."
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document was saved, but processing could not be queued.",
+        ) from exc
+    db.refresh(document)
+    return document

@@ -34,3 +34,7 @@ Passwords are hashed with Argon2 through `pwdlib`. Access JWTs last 15 minutes; 
 ## Day 4 note
 
 Original uploads go to a private S3-compatible bucket. Redis and Celery keep extraction off the request path. Text PDFs retain one source unit per non-empty page; DOCX text is kept in reading order as a single source unit without a page number. Uploads are allowlisted by extension and file signature, capped by compressed and expanded size, and rejected when the configured page/text limits are exceeded. OCR, chunking, and vector indexing remain separate later steps.
+
+## Day 5 note
+
+The first retrieval model is `sentence-transformers/all-MiniLM-L6-v2`, with 384-dimensional vectors in pgvector. Chunks use 220 tokenizer wordpieces and 40 wordpieces of overlap, aligned to word and sentence boundaries where practical. The supplied roadmap's 500/100 starting point exceeds this model's 256-wordpiece input limit and would be truncated, so this baseline stays below that ceiling until an evaluation compares chunk sizes and models. Search uses exact cosine distance for now; no approximate index is added before there is a corpus to benchmark.
