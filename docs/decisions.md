@@ -26,3 +26,7 @@ The supplied roadmap lays out a ten-week project and names planning, requirement
 ## Day 2 note
 
 The backend starts as a synchronous FastAPI/SQLAlchemy service. The first health route is a process liveness check, not a dependency readiness check. Database connectivity is provided through a request-scoped session dependency; no route uses it until a database-backed feature is added. Alembic is wired to the shared declarative metadata so future model migrations have one clear entry point.
+
+## Day 3 note
+
+Passwords are hashed with Argon2 through `pwdlib`. Access JWTs last 15 minutes; refresh JWTs last 30 days and are stored server-side only as SHA-256 digests. Refresh rotates the digest with a compare-and-swap update, and logout revokes the current session. Each authenticated request checks that its session remains active. Workspace membership is required to list members; only owners can add, change, or remove non-owner members. Ownership transfer and email invitations remain future work.

@@ -5,6 +5,7 @@ PostgreSQL is the system of record. Use UUID primary keys, UTC timestamps, forei
 ```mermaid
 erDiagram
   USERS ||--o{ WORKSPACE_MEMBERS : joins
+  USERS ||--o{ AUTH_SESSIONS : authenticates
   WORKSPACES ||--o{ WORKSPACE_MEMBERS : contains
   WORKSPACES ||--o{ DOCUMENTS : owns
   USERS ||--o{ DOCUMENTS : uploads
@@ -21,6 +22,14 @@ erDiagram
     string email UK
     string password_hash
     string display_name
+    datetime created_at
+  }
+  AUTH_SESSIONS {
+    uuid id PK
+    uuid user_id FK
+    string refresh_token_hash
+    datetime expires_at
+    datetime revoked_at
     datetime created_at
   }
   WORKSPACES {

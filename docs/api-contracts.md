@@ -21,6 +21,8 @@ Base path: `/api/v1`. Requests and responses use JSON except multipart document 
 
 `POST /auth/register` request: `{ "email": "person@example.com", "password": "…", "display_name": "…" }`. Return the created user with `201 Created`; never echo the password.
 
+The implementation requires passwords of 12–128 characters. `POST /auth/login` accepts JSON `{ "email": "…", "password": "…" }` and returns a bearer access token, refresh token, token type, and access-token lifetime. Send the access token as `Authorization: Bearer <token>`. `POST /auth/refresh` accepts `{ "refresh_token": "…" }`; a successful refresh rotates the refresh token, so clients must discard the old one. `POST /auth/logout` revokes the session identified by the access token. `GET /auth/me` returns the current account. Authentication routes that issue or validate tokens require `JWT_SECRET` to be configured.
+
 ## Workspaces
 
 | Method | Path | Purpose |
@@ -28,9 +30,12 @@ Base path: `/api/v1`. Requests and responses use JSON except multipart document 
 | POST | `/workspaces` | Create a workspace; creator becomes owner |
 | GET | `/workspaces` | List only workspaces the caller belongs to |
 | GET | `/workspaces/{workspace_id}` | Read workspace details after membership check |
-| POST | `/workspaces/{workspace_id}/members` | Invite/add a member (owner only initially) |
+| POST | `/workspaces/{workspace_id}/members` | Add an existing account by user UUID (owner only) |
 | PATCH | `/workspaces/{workspace_id}/members/{user_id}` | Change a member role (owner only) |
 | DELETE | `/workspaces/{workspace_id}/members/{user_id}` | Remove a member (owner only) |
+| GET | `/workspaces/{workspace_id}/members` | List members (workspace member only) |
+
+Workspace creation automatically adds the creator as owner. Membership management currently adds an existing account by user UUID; it does not send invitations. Owners can change or remove non-owner members. Ownership transfer is not implemented, so the current owner cannot be demoted or removed.
 
 ## Documents and ingestion
 
