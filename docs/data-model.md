@@ -9,6 +9,7 @@ erDiagram
   WORKSPACES ||--o{ WORKSPACE_MEMBERS : contains
   WORKSPACES ||--o{ DOCUMENTS : owns
   USERS ||--o{ DOCUMENTS : uploads
+  DOCUMENTS ||--o{ DOCUMENT_PAGES : extracts
   DOCUMENTS ||--o{ CHUNKS : produces
   WORKSPACES ||--o{ CONVERSATIONS : contains
   USERS ||--o{ CONVERSATIONS : starts
@@ -51,11 +52,20 @@ erDiagram
     string filename
     string content_type
     bigint size_bytes
+    string sha256
     string object_key
     string status
+    int page_count
     string error_summary
     datetime created_at
     datetime updated_at
+  }
+  DOCUMENT_PAGES {
+    uuid id PK
+    uuid document_id FK
+    int source_index
+    int page_number
+    text text
   }
   CHUNKS {
     uuid id PK

@@ -17,25 +17,11 @@ from app.schemas.workspace import (
     WorkspaceCreate,
     WorkspaceRead,
 )
+from app.services.workspace_access import get_workspace_membership, require_workspace_owner
 
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 CurrentDb = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
-
-
-def _get_member_or_404(db: Session, workspace_id: UUID, user_id: UUID) -> WorkspaceMember:
-    membership = db.get(WorkspaceMember, (workspace_id, user_id))
-    if membership is None:
-        # Conceal whether a workspace exists from users who do not belong to it.
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found.")
-    return membership
-
-
-def _require_owner(db: Session, workspace_id: UUID, user_id: UUID) -> WorkspaceMember:
-    membership = _get_member_or_404(db, workspace_id, user_id)
-    if membership.role != "owner":
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Workspace owner role required.")
-    return membership
 
 
 @router.post("", response_model=WorkspaceRead, status_code=status.HTTP_201_CREATED)
@@ -77,7 +63,7 @@ def list_workspaces(db: CurrentDb, user: CurrentUser) -> list[WorkspaceRead]:
 
 @router.get("/{workspace_id}", response_model=WorkspaceRead)
 def get_workspace(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> WorkspaceRead:
-    membership = _get_member_or_404(db, workspace_id, user.id)
+    membership = get_workspace_membership(db, workspace_id, user.id)
     workspace = db.get(Workspace, workspace_id)
     if workspace is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found.")
@@ -92,7 +78,7 @@ def get_workspace(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> Works
 
 @router.get("/{workspace_id}/members", response_model=list[MemberRead])
 def list_members(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> list[MemberRead]:
-    _get_member_or_404(db, workspace_id, user.id)
+    get_workspace_membership(db, workspace_id, user.id)
     rows = db.execute(
         select(User.id, User.email, User.display_name, WorkspaceMember.role, WorkspaceMember.joined_at)
         .join(WorkspaceMember, WorkspaceMember.user_id == User.id)
@@ -118,7 +104,7 @@ def add_member(
     db: CurrentDb,
     user: CurrentUser,
 ) -> MemberRead:
-    _require_owner(db, workspace_id, user.id)
+    require_workspace_owner(db, workspace_id, user.id)
     target_user = db.scalar(select(User).where(User.id == payload.user_id))
     if target_user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found.")
@@ -151,8 +137,8 @@ def update_member_role(
     db: CurrentDb,
     user: CurrentUser,
 ) -> MemberRead:
-    _require_owner(db, workspace_id, user.id)
-    member = _get_member_or_404(db, workspace_id, member_user_id)
+    require_workspace_owner(db, workspace_id, user.id)
+    member = get_workspace_membership(db, workspace_id, member_user_id)
     if member.role == "owner":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -184,8 +170,8 @@ def remove_member(
     db: CurrentDb,
     user: CurrentUser,
 ) -> Response:
-    _require_owner(db, workspace_id, user.id)
-    member = _get_member_or_404(db, workspace_id, member_user_id)
+    require_workspace_owner(db, workspace_id, user.id)
+    member = get_workspace_membership(db, workspace_id, member_user_id)
     if member.role == "owner":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

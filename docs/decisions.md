@@ -30,3 +30,7 @@ The backend starts as a synchronous FastAPI/SQLAlchemy service. The first health
 ## Day 3 note
 
 Passwords are hashed with Argon2 through `pwdlib`. Access JWTs last 15 minutes; refresh JWTs last 30 days and are stored server-side only as SHA-256 digests. Refresh rotates the digest with a compare-and-swap update, and logout revokes the current session. Each authenticated request checks that its session remains active. Workspace membership is required to list members; only owners can add, change, or remove non-owner members. Ownership transfer and email invitations remain future work.
+
+## Day 4 note
+
+Original uploads go to a private S3-compatible bucket. Redis and Celery keep extraction off the request path. Text PDFs retain one source unit per non-empty page; DOCX text is kept in reading order as a single source unit without a page number. Uploads are allowlisted by extension and file signature, capped by compressed and expanded size, and rejected when the configured page/text limits are exceeded. OCR, chunking, and vector indexing remain separate later steps.

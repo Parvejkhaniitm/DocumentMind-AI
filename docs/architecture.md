@@ -20,12 +20,12 @@ flowchart LR
 
 ## Document ingestion
 
-1. The API authenticates the user and checks workspace membership.
-2. It validates the file type and size, stores the original in object storage, creates a `documents` row with `queued` status, and enqueues an ingestion job.
-3. A worker downloads the object, extracts PDF or DOCX text while preserving page references, and marks the document `processing`.
-4. Text is normalized and split into overlapping chunks. Each chunk retains document, workspace, page, and ordinal metadata.
-5. The embedding adapter produces vectors; the worker writes chunks and vectors to PostgreSQL and marks the document `ready`.
-6. On a recoverable failure, the job retries. On terminal failure, the document becomes `failed` with a safe, user-visible error summary.
+1. The API authenticates the user, checks workspace membership, and requires the editor or owner role.
+2. It validates PDF/DOCX structure and size, stores the original in a private bucket, creates a `documents` row with `queued` status, and enqueues an ingestion job.
+3. A Celery worker downloads the object, extracts PDF or DOCX text, and marks the document `processing`.
+4. Extracted source units are stored in PostgreSQL. PDF units preserve the 1-based page number; DOCX is stored as one unit without a page number.
+5. Chunking and embeddings will be added after source extraction, keeping the ingestion stages independently testable.
+6. Invalid input produces a safe, user-visible `failed` status. Transient storage/worker failures retry with backoff and become failed after the retry limit.
 
 ## Question answering
 

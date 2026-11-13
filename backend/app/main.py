@@ -8,6 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1 import api_router
 from app.core.config import settings
+from app.core.middleware import UploadSizeLimitMiddleware
 
 app = FastAPI(
     title=settings.app_name,
@@ -16,6 +17,7 @@ app = FastAPI(
 )
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.add_middleware(UploadSizeLimitMiddleware)
 
 
 @app.middleware("http")

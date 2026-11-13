@@ -2,7 +2,7 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 3 authentication and workspace foundation. Registration, login, refresh, logout, current-user, workspace creation/listing, and owner-managed membership are implemented. Document ingestion, search, and chat remain planned.
+> Project status: Day 4 document intake. Authenticated members can upload, process, inspect, and delete PDF/DOCX files inside their workspace. Semantic search and chat remain planned.
 
 ## Product goal
 
@@ -13,6 +13,7 @@ A signed-in user can create or join a workspace, upload a document, wait for it 
 - **Day 1:** product requirements, architecture, initial data model, API contracts, and repository setup.
 - **Day 2:** FastAPI application, versioned API router, liveness endpoint, settings, SQLAlchemy session foundation, Alembic setup, and local PostgreSQL service.
 - **Day 3:** Argon2 password hashing, signed access tokens, rotating/revocable refresh sessions, current-user endpoint, workspace access control, and membership role management.
+- **Day 4:** private S3-compatible storage, bounded PDF/DOCX uploads, asynchronous Celery extraction, source-page text records, processing status, and workspace-scoped document management.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -38,7 +39,8 @@ DocuMind-AI/
 │   │   ├── db/
 │   │   ├── models/
 │   │   ├── schemas/
-│   │   └── services/
+│   │   ├── services/
+│   │   └── tasks/
 │   ├── migrations/
 │   └── tests/
 ├── frontend/
@@ -53,15 +55,18 @@ DocuMind-AI/
 Requirements: Python 3.11+ and Docker Compose.
 
 1. From the repository root, copy `.env.example` to `.env`. Replace `JWT_SECRET` with the output of `python -c "import secrets; print(secrets.token_hex(32))"`; the checked-in placeholder is rejected by the API.
-2. Start PostgreSQL with pgvector: `docker compose up -d db`.
+2. Start PostgreSQL with pgvector, Redis, and MinIO: `docker compose up -d db redis minio`.
 3. Install the backend in editable mode: `python -m pip install -e ./backend`.
 4. Apply the initial schema: `python -m alembic -c backend/alembic.ini upgrade head`.
 5. Start the API: `python -m uvicorn app.main:app --reload --app-dir backend`.
-6. Open `http://127.0.0.1:8000/docs` for the generated API reference. The liveness route is `GET http://127.0.0.1:8000/api/v1/health`.
+6. In another terminal, start the worker from `backend`: `python -m celery -A app.core.celery_app:celery_app worker --loglevel=INFO`.
+7. Open `http://127.0.0.1:8000/docs` for the generated API reference. The liveness route is `GET http://127.0.0.1:8000/api/v1/health`.
 
 Authentication routes live under `/api/v1/auth`; workspace routes live under `/api/v1/workspaces`. The checked-in placeholder `JWT_SECRET` is intentionally rejected. Generate a private secret for local development, and use a secret manager for deployed environments.
 
-The health route reports whether the API process is running. It does not claim that PostgreSQL or other dependencies are ready. Alembic is configured under `backend/`; its first migration creates users, authentication sessions, workspaces, and workspace memberships.
+The health route reports whether the API process is running. It does not claim that PostgreSQL, Redis, or object storage are ready. Alembic creates users, authentication sessions, workspaces, memberships, document metadata, and extracted source units.
+
+Uploads are limited to 20 MiB by default. Text-based PDFs retain page references; DOCX text is stored as one source unit because DOCX has no reliable page boundaries. Scanned-PDF OCR, chunking, and semantic indexing are planned for later days.
 
 ## Definition of done
 

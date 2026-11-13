@@ -46,7 +46,9 @@ Workspace creation automatically adds the creator as owner. Membership managemen
 | GET | `/workspaces/{workspace_id}/documents/{document_id}` | Read metadata and processing status |
 | DELETE | `/workspaces/{workspace_id}/documents/{document_id}` | Remove a document and schedule file/chunk cleanup |
 
-Upload returns `202 Accepted` with `{ "id": "…", "status": "queued" }`. A successful response means the job was queued, not that extraction has completed. Enforce file limits and allowlisted MIME types server-side.
+Upload accepts a multipart field named `upload`, requires the owner/editor role, validates PDF/DOCX file structure, and returns `202 Accepted` with document metadata and a processing status. A successful response means the ingestion job was queued, not that extraction has completed. The initial default file limit is 20 MiB (plus bounded multipart framing); size and page limits are configurable. Current statuses are `queued`, `processing`, `ready`, `failed`, and `deleting`. Members can list and read document metadata; owners and editors can delete documents. Original objects remain private in S3-compatible storage.
+
+The worker extracts selectable PDF text with page numbers and DOCX text in document order. DOCX source units do not have a page number. Scanned PDFs fail with a clear status because OCR is not implemented yet. Extracted text is stored as source units for the next chunking milestone; no embeddings or question answering are generated yet.
 
 ## Search and chat
 

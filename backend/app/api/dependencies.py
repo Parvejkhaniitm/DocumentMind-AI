@@ -1,7 +1,7 @@
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
-from datetime import datetime, timezone
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -9,10 +9,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.security import decode_token, get_signing_secret
 from app.db.session import get_db
 from app.models.auth_session import AuthSession
 from app.models.user import User
-from app.core.security import decode_token, get_signing_secret
 
 bearer_scheme = HTTPBearer(auto_error=False)
 DbSession = Annotated[Session, Depends(get_db)]
