@@ -22,3 +22,7 @@
 ## Day 1 note
 
 The supplied roadmap lays out a ten-week project and names planning, requirements, architecture, ER design, and GitHub setup as the first-week milestone. This repository is being organized as a ten-day sprint per the project owner's request; the longer roadmap remains the source for overall feature scope.
+
+## Day 2 note
+
+The backend starts as a synchronous FastAPI/SQLAlchemy service. The first health route is a process liveness check, not a dependency readiness check. Database connectivity is provided through a request-scoped session dependency; no route uses it until a database-backed feature is added. Alembic is wired to the shared declarative metadata so future model migrations have one clear entry point.

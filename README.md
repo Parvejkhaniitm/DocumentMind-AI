@@ -2,19 +2,16 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 1 planning and repository foundation. The application features below are planned; they are not implemented yet.
+> Project status: Day 2 backend foundation. The API scaffold and liveness endpoint are implemented; product features such as authentication, document ingestion, search, and chat remain planned.
 
 ## Product goal
 
 A signed-in user can create or join a workspace, upload a document, wait for it to be processed, and ask a question. DocuMind returns an answer supported by passages from documents the user is allowed to access. Every citation points back to a document and page.
 
-## Day 1 deliverables
+## Project progress
 
-- Product requirements and a definition of done
-- System architecture and document-processing flow
-- Initial relational data model
-- Versioned REST API contracts
-- Repository structure and project decisions
+- **Day 1:** product requirements, architecture, initial data model, API contracts, and repository setup.
+- **Day 2:** FastAPI application, versioned API router, liveness endpoint, settings, SQLAlchemy session foundation, Alembic setup, and local PostgreSQL service.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -49,9 +46,17 @@ DocuMind-AI/
 └── README.md
 ```
 
-## Local setup
+## Run the backend locally
 
-Implementation setup instructions will be added when the backend and frontend foundations exist. For now, review the planning documents under `docs/`.
+Requirements: Python 3.11+ and Docker Compose.
+
+1. From the repository root, copy `.env.example` to `.env` and change secrets before using any non-local environment.
+2. Start PostgreSQL with pgvector: `docker compose up -d db`.
+3. Install the backend in editable mode: `python -m pip install -e ./backend`.
+4. Start the API: `python -m uvicorn app.main:app --reload --app-dir backend`.
+5. Open `http://127.0.0.1:8000/docs` for the generated API reference. The liveness route is `GET http://127.0.0.1:8000/api/v1/health`.
+
+The health route reports whether the API process is running. It does not claim that PostgreSQL or other dependencies are ready. Alembic is configured under `backend/`; the first schema migration will be added with the initial models.
 
 ## Definition of done
 
