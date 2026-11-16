@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     embedding_chunk_tokens: int = Field(default=220, gt=0, le=240)
     embedding_chunk_overlap: int = Field(default=40, ge=0, lt=220)
     embedding_batch_size: int = Field(default=32, gt=0, le=128)
+    llm_provider: str = "openai_compatible"
+    llm_api_key: SecretStr | None = None
+    llm_model: str = "gpt-4o-mini"
+    llm_base_url: str = "https://api.openai.com/v1"
+    rag_top_k: int = Field(default=6, gt=0, le=20)
+    rag_min_relevance: float = Field(default=0.25, ge=-1.0, le=1.0)
     jwt_secret: SecretStr | None = None
     access_token_minutes: int = Field(default=15, gt=0, le=60)
     refresh_token_days: int = Field(default=30, gt=0, le=90)

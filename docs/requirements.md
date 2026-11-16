@@ -27,6 +27,8 @@ Initial use cases include locating a leave rule, summarizing a report with suppo
 7. Users can view prior conversations and provide answer feedback.
 8. The service records basic usage and retrieval metrics to support later evaluation.
 
+Day 6 implements conversation persistence and grounded, non-streaming question answering. The provider is configured through environment settings and receives only bounded workspace-retrieved passages. Every returned citation is validated against the retrieved candidate set. Relevance threshold and answer quality still require evaluation with a fixed benchmark before quality claims are made.
+
 ## Non-functional requirements
 
 - Authorization is checked for every workspace-scoped request and every retrieved chunk.

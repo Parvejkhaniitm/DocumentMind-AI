@@ -64,9 +64,11 @@ The worker extracts selectable PDF text with page numbers and DOCX text in docum
 
 Search request: `{ "query": "…", "document_ids": [], "limit": 10 }`. Search response items include chunk text, document ID/name, source index, page number when available, and a cosine-similarity score.
 
-The implementation accepts a query, optional document UUID filters, and a result limit from 1–20. It embeds the query with the configured model, then ranks chunks by cosine similarity. Results include document name, chunk text, source index, and page number when available. Search checks workspace membership and restricts retrieval to ready documents whose stored embedding model matches the configured model. Model input length is validated before embedding; no answer generation or cross-encoder reranking is implemented yet.
+The implementation accepts a query, optional document UUID filters, and a result limit from 1–20. It embeds the query with the configured model, then ranks chunks by cosine similarity. Results include document name, chunk text, source index, and page number when available. Search checks workspace membership and restricts retrieval to ready documents whose stored embedding model matches the configured model. Model input length is validated before embedding; cross-encoder reranking is not implemented.
 
-Question request: `{ "content": "…" }`. Response shape:
+Create a conversation with an optional `{ "title": "…" }` body; it is private to its creator. Send a question as `{ "content": "…" }`. The API embeds the question, retrieves only ready chunks from the authorized workspace, and supplies the top relevant passages plus a short conversation history to the configured OpenAI-compatible chat-completions provider. Passage text is treated as untrusted data. The provider must return JSON with an answer and chunk IDs; the API rejects IDs that were not in the retrieved evidence. If evidence is below the configured relevance threshold, the API records an explicit insufficient-evidence response without calling the provider. A provider key is required only when enough evidence exists to generate an answer.
+
+Question response shape:
 
 ```json
 {
@@ -78,16 +80,17 @@ Question request: `{ "content": "…" }`. Response shape:
     {
       "document_id": "document-uuid",
       "document_name": "Policy.pdf",
-      "page_start": 4,
-      "page_end": 4,
-      "chunk_id": "chunk-uuid"
+      "page_number": 4,
+      "source_index": 4,
+      "chunk_id": "chunk-uuid",
+      "relevance_score": 0.82
     }
   ]
 }
 ```
 
-`answer_status` can be `answered` or `insufficient_evidence`. Source IDs must resolve to chunks from the requested workspace. Exact streaming behavior is deferred until the non-streaming contract is stable.
+`answer_status` can be `answered` or `insufficient_evidence`. Source IDs resolve to retrieved chunks in the requested workspace. `GET` conversation history includes user and assistant messages with their validated citations. Exact streaming behavior is deferred until the non-streaming contract is stable.
 
 ## Status codes
 
-Use `400` for invalid input, `401` for missing/invalid authentication, `403` for authenticated users without access, `404` for absent or intentionally concealed resources, `409` for conflicts, `413` for oversized files, `415` for unsupported formats, `422` for schema validation, and `429` for rate limits. Do not leak whether an inaccessible workspace resource exists.
+Use `400` for invalid input, `401` for missing/invalid authentication, `403` for authenticated users without access, `404` for absent or intentionally concealed resources, `409` for conflicts, `413` for oversized files, `415` for unsupported formats, `422` for schema validation, `429` for rate limits, and `503` when embedding or answer providers are unavailable. Do not leak whether an inaccessible workspace resource exists.

@@ -34,9 +34,11 @@ The initial search uses exact cosine-distance ordering in PostgreSQL. Add an app
 1. The API validates workspace membership before accepting the query.
 2. The embedding adapter encodes the question with the same model and preprocessing used for document chunks.
 3. Retrieval searches only chunks in the requested workspace. Candidate passages may be reranked with a cross-encoder.
-4. The answer service sends a bounded set of passages to the configured LLM, with instructions to use only the supplied evidence and return structured citations.
-5. The API validates that every cited chunk belongs to the workspace and maps citations to document names and pages before returning the response.
-6. If retrieval finds insufficient evidence, return that outcome instead of presenting an unsupported answer as fact.
+4. The answer service sends a bounded set of passages and recent conversation turns to the configured OpenAI-compatible provider. Retrieved passage text is explicitly treated as untrusted data; the provider returns structured answer text and chunk IDs.
+5. The API accepts citation IDs only from the retrieved candidate set and maps those chunks to document names and source page metadata before returning the response.
+6. If no passage meets the configured relevance threshold, return and persist an insufficient-evidence outcome without calling the provider.
+
+Conversation rows are private to their creating user within the workspace. Every history read and question request checks both workspace membership and conversation ownership. `LLM_API_KEY` is optional for search and insufficient-evidence responses, but required when generation is needed.
 
 ## Trust boundaries and safeguards
 

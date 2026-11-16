@@ -2,7 +2,7 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 5 semantic search. Authenticated members can upload and process PDF/DOCX files, index extracted text with vector embeddings, and search within their workspace. Grounded chat and citations in generated answers remain planned.
+> Project status: Day 6 grounded Q&A. Authenticated members can upload and process PDF/DOCX files, search their workspace, and ask document-grounded questions with citations linked to source chunks.
 
 ## Product goal
 
@@ -15,6 +15,7 @@ A signed-in user can create or join a workspace, upload a document, wait for it 
 - **Day 3:** Argon2 password hashing, signed access tokens, rotating/revocable refresh sessions, current-user endpoint, workspace access control, and membership role management.
 - **Day 4:** private S3-compatible storage, bounded PDF/DOCX uploads, asynchronous Celery extraction, source-page text records, processing status, and workspace-scoped document management.
 - **Day 5:** token-aware overlapping chunks, normalized 384-dimensional embeddings, pgvector storage, semantic search restricted to ready documents in the current workspace, and document reprocessing for reindexing.
+- **Day 6:** private conversation history, retrieval-grounded answers through an OpenAI-compatible provider, validated citations, and an explicit insufficient-evidence response.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -67,7 +68,9 @@ Authentication routes live under `/api/v1/auth`; workspace routes live under `/a
 
 The health route reports whether the API process is running. It does not claim that PostgreSQL, Redis, or object storage are ready. Alembic creates users, authentication sessions, workspaces, memberships, document metadata, and extracted source units.
 
-Uploads are limited to 20 MiB by default. Text-based PDFs retain page references; DOCX text is stored as one source unit because DOCX has no reliable page boundaries. Scanned-PDF OCR and generated answer synthesis remain planned. The embedding model is downloaded from Hugging Face on first indexing/search, so first use needs network access.
+Uploads are limited to 20 MiB by default. Text-based PDFs retain page references; DOCX text is stored as one source unit because DOCX has no reliable page boundaries. Scanned-PDF OCR remains planned. The embedding model is downloaded from Hugging Face on first indexing/search, so first use needs network access.
+
+Grounded answers require `LLM_API_KEY` and an OpenAI-compatible chat-completions endpoint. Set `LLM_PROVIDER`, `LLM_MODEL`, and `LLM_BASE_URL` in your untracked `.env`; `.env.example` shows the defaults. The API stores each user's conversations separately and checks workspace membership before retrieval. Apply migrations with `python -m alembic -c backend/alembic.ini upgrade head` after pulling updates.
 
 Chunks default to 220 wordpieces with 40 wordpieces of overlap. The roadmap suggested 500/100, but `all-MiniLM-L6-v2` truncates inputs at 256 wordpieces. Keeping each chunk below the model input limit preserves the full text; chunk size remains an evaluation setting, not a quality claim.
 

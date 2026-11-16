@@ -80,17 +80,6 @@ erDiagram
     string embedding_model
     datetime created_at
   }
-  CHUNKS {
-    uuid id PK
-    uuid document_id FK
-    uuid workspace_id FK
-    int ordinal
-    int page_start
-    int page_end
-    text content
-    vector embedding
-    datetime created_at
-  }
   CONVERSATIONS {
     uuid id PK
     uuid workspace_id FK
@@ -125,12 +114,12 @@ erDiagram
 
 - Unique normalized email for each user.
 - One membership row per `(workspace_id, user_id)`; roles initially `owner`, `editor`, and `viewer`.
-- One chunk ordinal per document; `page_start` and `page_end` are nullable for formats without reliable pages.
-- Restrict message roles to `user` and `assistant`; constrain feedback ratings to the selected range.
+- One chunk ordinal per document; `page_number` is nullable for formats without reliable pages, while `source_index` remains available.
+- Restrict message roles to `user` and `assistant`; assistant messages may be `answered` or `insufficient_evidence`.
 - Index workspace IDs on documents, chunks, and conversations. Add a pgvector index only after choosing the distance operator and validating it with representative data.
 - Ensure source links can only reference chunks belonging to the conversation's workspace; enforce through service validation and, if practical, composite database constraints.
 - Use Alembic migrations for all schema changes.
 
 ## Notes
 
-This is an initial logical model. Exact deletion behavior, retention, chunk vector dimension, and whether to normalize source citations further should be decided before the first production migration.
+Conversation records belong to their creating user and workspace. Message-source rows retain the chunk relevance score returned during retrieval; deleting a source chunk cascades its citation row. This is an evolving model; retention and conversation export remain open product decisions.
