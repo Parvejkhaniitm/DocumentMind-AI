@@ -45,3 +45,10 @@ The first retrieval model is `sentence-transformers/all-MiniLM-L6-v2`, with 384-
 - Give the model a bounded set of retrieved chunks and recent turns. Treat document passages as untrusted content and accept only citation IDs present in that retrieval result.
 - Return an explicit insufficient-evidence response below a configurable initial relevance threshold. The `0.25` default is a starting setting, not an evaluated quality threshold; tune it with a fixed benchmark before making retrieval or answer quality claims.
 - Keep provider secrets in the local `.env`; the example file contains no usable key.
+
+## Day 7: testing and evaluation baseline
+
+- Keep pytest and Ruff in the `dev` extra. Keep large transformer packages in the separate `embeddings` extra so unit-test CI does not download a model runtime.
+- Unit tests validate deterministic logic and boundary behavior; they do not replace integration tests against PostgreSQL/pgvector or a labeled retrieval benchmark.
+- Report recall@k and mean reciprocal rank from a fixed, manually labeled retrieval set before tuning the relevance threshold or claiming search quality.
+- Measure p50/p95 and mean latency with the same benchmark command; these figures include embedding inference and database retrieval on the machine running the benchmark.

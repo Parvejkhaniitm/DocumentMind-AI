@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from hmac import compare_digest
 from typing import Annotated
 from uuid import UUID
@@ -84,7 +84,7 @@ def login(payload: LoginRequest, db: CurrentDb) -> TokenPair:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     expires_at = now + timedelta(days=settings.refresh_token_days)
     auth_session = AuthSession(user_id=user.id, expires_at=expires_at)
     db.add(auth_session)
@@ -121,13 +121,13 @@ def refresh(payload: RefreshRequest, db: CurrentDb) -> TokenPair:
     except (jwt.InvalidTokenError, ValueError, KeyError, TypeError):
         raise unauthorized from None
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     auth_session = db.scalar(select(AuthSession).where(AuthSession.id == session_id))
     if auth_session is None:
         raise unauthorized
     expires_at = auth_session.expires_at
     if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
+        expires_at = expires_at.replace(tzinfo=UTC)
     if (
         auth_session.user_id != user_id
         or auth_session.revoked_at is not None
@@ -165,7 +165,7 @@ def logout(
     db: CurrentDb,
     authenticated: Annotated[AuthenticatedSession, Depends(get_authenticated_session)],
 ) -> LogoutResponse:
-    authenticated.session.revoked_at = datetime.now(timezone.utc)
+    authenticated.session.revoked_at = datetime.now(UTC)
     authenticated.session.refresh_token_hash = None
     db.commit()
     return LogoutResponse()

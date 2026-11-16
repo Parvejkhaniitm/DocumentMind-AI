@@ -30,7 +30,9 @@ CurrentDb = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
-def _conversation_or_404(db: Session, workspace_id: UUID, conversation_id: UUID, user_id: UUID) -> Conversation:
+def _conversation_or_404(
+    db: Session, workspace_id: UUID, conversation_id: UUID, user_id: UUID
+) -> Conversation:
     conversation = db.scalar(
         select(Conversation).where(
             Conversation.id == conversation_id,
@@ -91,17 +93,21 @@ def get_conversation(
         )
     )
     message_ids = [message.id for message in messages]
-    source_rows = db.execute(
-        select(MessageSource, Chunk, Document, DocumentPage)
-        .join(Chunk, Chunk.id == MessageSource.chunk_id)
-        .join(Document, Document.id == Chunk.document_id)
-        .join(DocumentPage, DocumentPage.id == Chunk.document_page_id)
-        .where(
-            MessageSource.message_id.in_(message_ids),
-            Chunk.workspace_id == workspace_id,
-            Document.workspace_id == workspace_id,
-        )
-    ).all() if message_ids else []
+    source_rows = (
+        db.execute(
+            select(MessageSource, Chunk, Document, DocumentPage)
+            .join(Chunk, Chunk.id == MessageSource.chunk_id)
+            .join(Document, Document.id == Chunk.document_id)
+            .join(DocumentPage, DocumentPage.id == Chunk.document_page_id)
+            .where(
+                MessageSource.message_id.in_(message_ids),
+                Chunk.workspace_id == workspace_id,
+                Document.workspace_id == workspace_id,
+            )
+        ).all()
+        if message_ids
+        else []
+    )
     sources_by_message: dict[UUID, list[CitationRead]] = {}
     for source, chunk, document, page in source_rows:
         sources_by_message.setdefault(source.message_id, []).append(
@@ -133,7 +139,9 @@ def get_conversation(
     )
 
 
-@router.post("/{conversation_id}/messages", response_model=AnswerRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{conversation_id}/messages", response_model=AnswerRead, status_code=status.HTTP_201_CREATED
+)
 def ask_question(
     workspace_id: UUID,
     conversation_id: UUID,
@@ -146,11 +154,19 @@ def ask_question(
     try:
         evidence = retrieve_evidence(db, workspace_id, payload.content)
     except SearchQueryTooLong as exc:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
+        ) from exc
     except EmbeddingConfigurationError as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Embedding model is unavailable.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Embedding model is unavailable.",
+        ) from exc
     except Exception as exc:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Document retrieval is temporarily unavailable.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Document retrieval is temporarily unavailable.",
+        ) from exc
 
     evidence = [item for item in evidence if item["score"] >= settings.rag_min_relevance]
     history_rows = list(
@@ -161,13 +177,13 @@ def ask_question(
             .limit(8)
         )
     )
-    history = [
-        {"role": row.role, "content": row.content}
-        for row in reversed(history_rows)
-    ]
+    history = [{"role": row.role, "content": row.content} for row in reversed(history_rows)]
 
     if not evidence:
-        answer = "I could not find enough relevant information in this workspace's processed documents to answer that question."
+        answer = (
+            "I could not find enough relevant information in this workspace's processed documents "
+            "to answer that question."
+        )
         cited_ids: list[UUID] = []
         answer_status = "insufficient_evidence"
     else:
@@ -204,7 +220,9 @@ def ask_question(
             )
         )
     if conversation.title == "New conversation":
-        conversation.title = payload.content[:197].rstrip() + ("..." if len(payload.content) > 200 else "")
+        conversation.title = payload.content[:197].rstrip() + (
+            "..." if len(payload.content) > 200 else ""
+        )
     db.commit()
     db.refresh(assistant_message)
 

@@ -7,12 +7,12 @@ from app.core.config import settings
 from app.db.session import SessionLocal
 from app.models.chunk import Chunk
 from app.models.document import Document, DocumentPage
+from app.services.chunking import chunk_text
 from app.services.document_extraction import (
     DocumentProcessingError,
     extract_docx,
     extract_pdf,
 )
-from app.services.chunking import chunk_text
 from app.services.embeddings import EmbeddingConfigurationError, embed_texts, get_tokenizer
 from app.services.object_storage import get_object
 
@@ -50,7 +50,9 @@ def process_document(self, document_id: str) -> None:
                 for text in chunk_text(unit.text, tokenizer):
                     chunk_descriptors.append((unit.source_index, text))
             if not chunk_descriptors:
-                raise DocumentProcessingError("No searchable text could be produced from this document.")
+                raise DocumentProcessingError(
+                    "No searchable text could be produced from this document."
+                )
             vectors = embed_texts([text for _, text in chunk_descriptors])
         except (DocumentProcessingError, EmbeddingConfigurationError) as exc:
             current_document = db.scalar(
@@ -66,7 +68,11 @@ def process_document(self, document_id: str) -> None:
         except Exception as exc:
             db.rollback()
             if self.request.retries < 3:
-                raise self.retry(exc=exc, countdown=10 * (2**self.request.retries), max_retries=3)
+                raise self.retry(
+                    exc=exc,
+                    countdown=10 * (2**self.request.retries),
+                    max_retries=3,
+                ) from exc
             document = db.get(Document, parsed_id)
             if document is not None and document.status != "deleting":
                 document.status = "failed"

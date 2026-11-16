@@ -24,7 +24,9 @@ def get_tokenizer() -> PreTrainedTokenizerFast:
 
     tokenizer = AutoTokenizer.from_pretrained(settings.embedding_model, use_fast=True)
     if not getattr(tokenizer, "is_fast", False):
-        raise EmbeddingConfigurationError("The configured model needs a fast tokenizer for chunk boundaries.")
+        raise EmbeddingConfigurationError(
+            "The configured model needs a fast tokenizer for chunk boundaries."
+        )
     return tokenizer
 
 
@@ -39,7 +41,9 @@ def get_embedding_model() -> SentenceTransformer:
             f"Model produces {dimension} dimensions; database expects {EMBEDDING_DIMENSION}."
         )
     if settings.embedding_chunk_overlap >= settings.embedding_chunk_tokens:
-        raise EmbeddingConfigurationError("Chunk overlap must be smaller than the chunk token limit.")
+        raise EmbeddingConfigurationError(
+            "Chunk overlap must be smaller than the chunk token limit."
+        )
     if settings.embedding_chunk_tokens + 2 > model.max_seq_length:
         raise EmbeddingConfigurationError(
             "Chunk token limit plus model special tokens exceeds the model's input limit."
@@ -67,5 +71,7 @@ def embed_query(query: str) -> list[float]:
     model = get_embedding_model()
     max_query_tokens = model.max_seq_length - 2
     if len(token_ids) > max_query_tokens:
-        raise SearchQueryTooLong(f"Search query is too long; use at most {max_query_tokens} model tokens.")
+        raise SearchQueryTooLong(
+            f"Search query is too long; use at most {max_query_tokens} model tokens."
+        )
     return embed_texts([query])[0]

@@ -80,7 +80,9 @@ def get_workspace(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> Works
 def list_members(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> list[MemberRead]:
     get_workspace_membership(db, workspace_id, user.id)
     rows = db.execute(
-        select(User.id, User.email, User.display_name, WorkspaceMember.role, WorkspaceMember.joined_at)
+        select(
+            User.id, User.email, User.display_name, WorkspaceMember.role, WorkspaceMember.joined_at
+        )
         .join(WorkspaceMember, WorkspaceMember.user_id == User.id)
         .where(WorkspaceMember.workspace_id == workspace_id)
         .order_by(WorkspaceMember.joined_at.asc())
@@ -97,7 +99,9 @@ def list_members(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> list[M
     ]
 
 
-@router.post("/{workspace_id}/members", response_model=MemberRead, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{workspace_id}/members", response_model=MemberRead, status_code=status.HTTP_201_CREATED
+)
 def add_member(
     workspace_id: UUID,
     payload: MemberCreate,

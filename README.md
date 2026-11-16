@@ -2,7 +2,7 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 6 grounded Q&A. Authenticated members can upload and process PDF/DOCX files, search their workspace, and ask document-grounded questions with citations linked to source chunks.
+> Project status: Day 7 test and evaluation foundation. Authenticated members can upload and process PDF/DOCX files, search their workspace, and ask document-grounded questions with citations linked to source chunks.
 
 ## Product goal
 
@@ -16,6 +16,7 @@ A signed-in user can create or join a workspace, upload a document, wait for it 
 - **Day 4:** private S3-compatible storage, bounded PDF/DOCX uploads, asynchronous Celery extraction, source-page text records, processing status, and workspace-scoped document management.
 - **Day 5:** token-aware overlapping chunks, normalized 384-dimensional embeddings, pgvector storage, semantic search restricted to ready documents in the current workspace, and document reprocessing for reindexing.
 - **Day 6:** private conversation history, retrieval-grounded answers through an OpenAI-compatible provider, validated citations, and an explicit insufficient-evidence response.
+- **Day 7:** focused backend unit tests for authentication primitives, chunk boundaries, request validation, retrieval metrics, and citation filtering; development-only test/lint dependencies; and CI checks.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -58,7 +59,7 @@ Requirements: Python 3.11+ and Docker Compose.
 
 1. From the repository root, copy `.env.example` to `.env`. Replace `JWT_SECRET` with the output of `python -c "import secrets; print(secrets.token_hex(32))"`; the checked-in placeholder is rejected by the API.
 2. Start PostgreSQL with pgvector, Redis, and MinIO: `docker compose up -d db redis minio`.
-3. Install the backend in editable mode: `python -m pip install -e ./backend`.
+3. Install the backend and embedding model support in editable mode: `python -m pip install -e "./backend[embeddings]"`. For development and tests, use `python -m pip install -e "./backend[dev,embeddings]"`.
 4. Apply the initial schema: `python -m alembic -c backend/alembic.ini upgrade head`.
 5. Start the API: `python -m uvicorn app.main:app --reload --app-dir backend`.
 6. In another terminal, start the worker from `backend`: `python -m celery -A app.core.celery_app:celery_app worker --loglevel=INFO`.
@@ -73,6 +74,12 @@ Uploads are limited to 20 MiB by default. Text-based PDFs retain page references
 Grounded answers require `LLM_API_KEY` and an OpenAI-compatible chat-completions endpoint. Set `LLM_PROVIDER`, `LLM_MODEL`, and `LLM_BASE_URL` in your untracked `.env`; `.env.example` shows the defaults. The API stores each user's conversations separately and checks workspace membership before retrieval. Apply migrations with `python -m alembic -c backend/alembic.ini upgrade head` after pulling updates.
 
 Chunks default to 220 wordpieces with 40 wordpieces of overlap. The roadmap suggested 500/100, but `all-MiniLM-L6-v2` truncates inputs at 256 wordpieces. Keeping each chunk below the model input limit preserves the full text; chunk size remains an evaluation setting, not a quality claim.
+
+## Tests and retrieval evaluation
+
+Install the development extra with `python -m pip install -e "./backend[dev]"`, then run `python -m pytest backend/tests`, `python -m ruff check backend/app backend/tests`, and `python -m ruff format --check backend/app backend/tests`. Embedding libraries are an optional extra so CI and API-only development avoid installing the large model runtime. The unit suite covers security primitives, request validation, chunk boundaries, retrieval metrics, and answer citation validation.
+
+For a local retrieval benchmark, prepare a private JSONL file with one object per query: `{"workspace_id":"…","query":"…","relevant_chunk_ids":["…"]}`. From `backend`, run `python -m app.scripts.evaluate_retrieval path/to/benchmark.jsonl --top-k 6`. It reports recall@k, MRR, mean latency, p50, and p95. Keep labels and workspace identifiers local; do not commit user document content. No benchmark score or performance claim is included until a representative labeled set is run.
 
 ## Definition of done
 

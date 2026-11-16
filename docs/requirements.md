@@ -29,6 +29,8 @@ Initial use cases include locating a leave rule, summarizing a report with suppo
 
 Day 6 implements conversation persistence and grounded, non-streaming question answering. The provider is configured through environment settings and receives only bounded workspace-retrieved passages. Every returned citation is validated against the retrieved candidate set. Relevance threshold and answer quality still require evaluation with a fixed benchmark before quality claims are made.
 
+Day 7 adds automated unit coverage for security primitives, question validation, chunking edge cases, citation filtering, and retrieval metric calculations. A local benchmark command reports recall@k, MRR, and query latency percentiles for workspace-specific queries with manually labeled relevant chunks; its results are not represented by unit tests alone.
+
 ## Non-functional requirements
 
 - Authorization is checked for every workspace-scoped request and every retrieved chunk.

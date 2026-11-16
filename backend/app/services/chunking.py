@@ -36,11 +36,7 @@ def chunk_text(text: str, tokenizer: PreTrainedTokenizerFast) -> list[str]:
             for candidate in range(lower_bound, end + 1):
                 char_end = offsets[candidate - 1][1]
                 has_trailing_space = char_end >= len(text) or text[char_end].isspace()
-                if (
-                    char_end > 0
-                    and text[char_end - 1] in SENTENCE_END
-                    and has_trailing_space
-                ):
+                if char_end > 0 and text[char_end - 1] in SENTENCE_END and has_trailing_space:
                     sentence_boundaries.append(candidate)
             if sentence_boundaries:
                 end = sentence_boundaries[-1]

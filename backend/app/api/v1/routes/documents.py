@@ -1,11 +1,11 @@
-from hashlib import sha256
 import logging
+from hashlib import sha256
+from io import BytesIO
 from pathlib import PurePosixPath
 from typing import Annotated
 from unicodedata import category
 from uuid import UUID, uuid4
 from zipfile import BadZipFile, ZipFile
-from io import BytesIO
 
 from botocore.exceptions import BotoCoreError, ClientError
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
@@ -34,7 +34,9 @@ def _safe_filename(original: str | None) -> str:
     name = PurePosixPath((original or "").replace("\\", "/")).name
     name = "".join(character for character in name if category(character) != "Cc").strip()
     if not name or name in {".", ".."}:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A valid filename is required.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="A valid filename is required."
+        )
     if len(name) > 255:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Filename is too long.")
     return name
@@ -46,12 +48,19 @@ def _validate_docx(content: bytes) -> None:
             names = set(archive.namelist())
             total_uncompressed_bytes = sum(item.file_size for item in archive.infolist())
     except (BadZipFile, OSError) as exc:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File is not a valid DOCX.") from exc
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File is not a valid DOCX."
+        ) from exc
 
     if "[Content_Types].xml" not in names or "word/document.xml" not in names:
-        raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File is not a valid DOCX.")
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="File is not a valid DOCX."
+        )
     if total_uncompressed_bytes > settings.max_docx_uncompressed_bytes:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="DOCX expands beyond the processing limit.")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="DOCX expands beyond the processing limit.",
+        )
 
 
 def _read_upload(upload: UploadFile) -> tuple[str, str, bytes]:
@@ -59,7 +68,10 @@ def _read_upload(upload: UploadFile) -> tuple[str, str, bytes]:
     extension = PurePosixPath(filename).suffix.lower()
     content = upload.file.read(settings.max_upload_bytes + 1)
     if len(content) > settings.max_upload_bytes:
-        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="File exceeds the upload size limit.")
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="File exceeds the upload size limit.",
+        )
 
     if extension == ".pdf" and b"%PDF-" in content[:1024]:
         return filename, PDF_TYPE, content
@@ -120,7 +132,9 @@ def upload_document(
         try:
             delete_object(object_key=object_key)
         except (BotoCoreError, ClientError):
-            logger.warning("Could not clean up an untracked document object after a database error.")
+            logger.warning(
+                "Could not clean up an untracked document object after a database error."
+            )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Document metadata could not be saved.",
@@ -130,7 +144,9 @@ def upload_document(
         process_document.delay(str(document.id))
     except Exception as exc:
         document.status = "failed"
-        document.error_summary = "Processing could not be queued. Check the worker service and upload again."
+        document.error_summary = (
+            "Processing could not be queued. Check the worker service and upload again."
+        )
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -154,7 +170,9 @@ def list_documents(workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> list
 
 
 @router.get("/{document_id}", response_model=DocumentRead)
-def get_document(document_id: UUID, workspace_id: UUID, db: CurrentDb, user: CurrentUser) -> Document:
+def get_document(
+    document_id: UUID, workspace_id: UUID, db: CurrentDb, user: CurrentUser
+) -> Document:
     get_workspace_membership(db, workspace_id, user.id)
     document = db.scalar(
         select(Document).where(
@@ -198,7 +216,9 @@ def delete_document(
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.post("/{document_id}/reprocess", response_model=DocumentRead, status_code=status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{document_id}/reprocess", response_model=DocumentRead, status_code=status.HTTP_202_ACCEPTED
+)
 def reprocess_document(
     document_id: UUID,
     workspace_id: UUID,
@@ -227,7 +247,9 @@ def reprocess_document(
         process_document.delay(str(document.id))
     except Exception as exc:
         document.status = "failed"
-        document.error_summary = "Processing could not be queued. Check the worker service and retry."
+        document.error_summary = (
+            "Processing could not be queued. Check the worker service and retry."
+        )
         db.commit()
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from uuid import UUID, uuid4
 
@@ -33,7 +33,7 @@ def hash_refresh_token(token: str) -> str:
 
 
 def _create_token(*, user_id: UUID, session_id: UUID, token_type: str, expires_at: datetime) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     claims = {
         "sub": str(user_id),
         "sid": str(session_id),
@@ -48,12 +48,16 @@ def _create_token(*, user_id: UUID, session_id: UUID, token_type: str, expires_a
 
 
 def create_access_token(*, user_id: UUID, session_id: UUID) -> str:
-    expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_minutes)
-    return _create_token(user_id=user_id, session_id=session_id, token_type="access", expires_at=expires_at)
+    expires_at = datetime.now(UTC) + timedelta(minutes=settings.access_token_minutes)
+    return _create_token(
+        user_id=user_id, session_id=session_id, token_type="access", expires_at=expires_at
+    )
 
 
 def create_refresh_token(*, user_id: UUID, session_id: UUID, expires_at: datetime) -> str:
-    return _create_token(user_id=user_id, session_id=session_id, token_type="refresh", expires_at=expires_at)
+    return _create_token(
+        user_id=user_id, session_id=session_id, token_type="refresh", expires_at=expires_at
+    )
 
 
 def decode_token(token: str, *, expected_type: str) -> dict[str, object]:

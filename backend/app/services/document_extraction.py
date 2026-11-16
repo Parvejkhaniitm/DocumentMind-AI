@@ -51,7 +51,9 @@ def extract_pdf(content: bytes) -> ExtractionResult:
     except DocumentProcessingError:
         raise
     except Exception as exc:
-        raise DocumentProcessingError("The PDF could not be read. Check that it is a valid PDF.") from exc
+        raise DocumentProcessingError(
+            "The PDF could not be read. Check that it is a valid PDF."
+        ) from exc
 
     _check_text_limit(units)
     if not units:
@@ -78,7 +80,9 @@ def extract_docx(content: bytes) -> ExtractionResult:
                     if row_text:
                         blocks.append(row_text)
     except Exception as exc:
-        raise DocumentProcessingError("The DOCX file could not be read. Check that it is valid.") from exc
+        raise DocumentProcessingError(
+            "The DOCX file could not be read. Check that it is valid."
+        ) from exc
 
     text = "\n".join(blocks).strip()
     unit = ExtractedUnit(source_index=1, page_number=None, text=text)
