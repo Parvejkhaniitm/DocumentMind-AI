@@ -2,7 +2,7 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 9 quality pass. The React app connects to the authenticated API, with document handling and API client behavior covered by focused tests.
+> Project status: Day 10 complete. The project includes a responsive frontend, workspace-scoped document Q&A, automated backend/frontend checks, and a Docker Compose demo stack.
 
 ## Product goal
 
@@ -19,6 +19,7 @@ A signed-in user can create or join a workspace, upload a document, wait for it 
 - **Day 7:** focused backend unit tests for authentication primitives, chunk boundaries, request validation, retrieval metrics, and citation filtering; development-only test/lint dependencies; and CI checks.
 - **Day 8:** responsive React/Vite frontend with sign-in and registration, workspace switching, document upload/status management, semantic search, and cited conversations.
 - **Day 9:** extraction and upload security coverage for PDF/DOCX limits, plus frontend API client tests for authentication, token refresh, and error handling.
+- **Day 10:** container images for the API, worker, and frontend; a full Docker Compose demo stack; CI for backend and frontend; and portfolio/resume notes.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -27,11 +28,11 @@ See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/ar
 - **Frontend:** React, TypeScript, Vite, responsive CSS
 - **API:** Python, FastAPI, Pydantic, SQLAlchemy 2.x, Alembic
 - **Data:** PostgreSQL with pgvector; Redis and Celery for background jobs
-- **Files:** S3-compatible object storage (MinIO locally)
+- **Files:** S3-compatible object storage (RustFS locally; compatible with S3 providers)
 - **Retrieval:** Sentence Transformers embeddings, vector search, optional cross-encoder reranking
 - **Answer generation:** an LLM provider behind a small adapter interface
 
-The model provider and deployment target remain configuration decisions. No API keys or credentials belong in source control.
+The model provider is configurable through environment variables. No API keys or credentials belong in source control.
 
 ## Planned repository layout
 
@@ -51,16 +52,29 @@ DocuMind-AI/
 ├── frontend/
 ├── docs/
 ├── docker-compose.yml
+├── backend/Dockerfile
+├── frontend/Dockerfile
 ├── .env.example
 └── README.md
 ```
+
+## Run the complete demo with Docker
+
+Requirements: Docker Desktop or Docker Engine with the Compose plugin. From the repository root:
+
+1. Copy `.env.example` to `.env`. Replace `JWT_SECRET` with a private value from `python -c "import secrets; print(secrets.token_hex(32))"`. Replace `POSTGRES_PASSWORD` with a hex-only secret from `python -c "import secrets; print(secrets.token_hex(24))"` because Compose places it in the database URL. Set `LLM_API_KEY` to an OpenAI-compatible provider key to enable grounded answers.
+2. Run `docker compose up --build` and wait for the API and frontend health checks to pass. The worker installs the embedding runtime; its model downloads on first use and is cached in a Docker volume.
+3. Open `http://localhost` to use the app. The API health check is at `http://localhost/api/v1/health`.
+4. Stop the stack with `docker compose down`. Data remains in named volumes; add `-v` only when you intend to remove the local database, uploaded files, and model cache. If port 80 is already in use, set `DOCUMIND_HTTP_PORT=8080` and open `http://localhost:8080` instead.
+
+The frontend is served through Nginx, which forwards `/api` to FastAPI on the Compose network. PostgreSQL migrations run before the API starts, and the worker waits for the API health check. RustFS provides local S3-compatible object storage. The database and object-storage credentials in `.env.example` are for local development only. Before hosting on a public server, use managed secrets, unique database and object-storage credentials, HTTPS, backups, resource limits, rate limits, and monitoring. This repository provides a reproducible local demo stack; it does not provision a public cloud deployment.
 
 ## Run the backend locally
 
 Requirements: Python 3.11+ and Docker Compose.
 
 1. From the repository root, copy `.env.example` to `.env`. Replace `JWT_SECRET` with the output of `python -c "import secrets; print(secrets.token_hex(32))"`; the checked-in placeholder is rejected by the API.
-2. Start PostgreSQL with pgvector, Redis, and MinIO: `docker compose up -d db redis minio`.
+2. Start PostgreSQL with pgvector, Redis, and RustFS: `docker compose up -d db redis rustfs`.
 3. Install the backend and embedding model support in editable mode: `python -m pip install -e "./backend[embeddings]"`. For development and tests, use `python -m pip install -e "./backend[dev,embeddings]"`.
 4. Apply the initial schema: `python -m alembic -c backend/alembic.ini upgrade head`.
 5. Start the API: `python -m uvicorn app.main:app --reload --app-dir backend`.
@@ -79,7 +93,7 @@ The frontend includes account registration/sign-in, workspace creation and switc
 
 Authentication routes live under `/api/v1/auth`; workspace routes live under `/api/v1/workspaces`. The checked-in placeholder `JWT_SECRET` is intentionally rejected. Generate a private secret for local development, and use a secret manager for deployed environments.
 
-The health route reports whether the API process is running. It does not claim that PostgreSQL, Redis, or object storage are ready. Alembic creates users, authentication sessions, workspaces, memberships, document metadata, and extracted source units.
+The health route reports whether the API process is running. It does not claim that PostgreSQL, Redis, or object storage are ready. In the Compose demo, the API container waits for PostgreSQL and Redis health before applying Alembic migrations. Alembic creates users, authentication sessions, workspaces, memberships, document metadata, and extracted source units.
 
 Uploads are limited to 20 MiB by default. Text-based PDFs retain page references; DOCX text is stored as one source unit because DOCX has no reliable page boundaries. Scanned-PDF OCR remains planned. The embedding model is downloaded from Hugging Face on first indexing/search, so first use needs network access.
 
@@ -98,6 +112,8 @@ For a local retrieval benchmark, prepare a private JSONL file with one object pe
 ## Definition of done
 
 A user can register, create a workspace, upload and process a supported document, ask a question, and receive an answer with valid citations. A user outside that workspace cannot access its files, chunks, or search results.
+
+See [docs/portfolio.md](docs/portfolio.md) for a concise architecture summary, demo notes, honest limitations, and resume-ready project bullets.
 
 ## Development principles
 

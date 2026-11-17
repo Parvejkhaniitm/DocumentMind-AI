@@ -11,7 +11,7 @@ flowchart LR
   API --> DB[(PostgreSQL + pgvector)]
   API --> Q[Redis queue]
   Q --> W[Celery ingestion worker]
-  W --> OBJ[(MinIO / S3 object storage)]
+  W --> OBJ[(RustFS locally / S3 object storage)]
   W --> DB
   API --> RET[Retrieval and RAG services]
   RET --> DB
@@ -50,7 +50,7 @@ Conversation rows are private to their creating user within the workspace. Every
 
 ## Deployment shape
 
-Local development will use Docker Compose for PostgreSQL, Redis, and MinIO. The API, worker, and frontend can run as separate processes. Production deployment can replace MinIO with S3-compatible storage and use managed PostgreSQL/Redis without changing application boundaries.
+Local development uses Docker Compose for PostgreSQL, Redis, and RustFS. The API, worker, and frontend can run as separate processes. Production deployment can replace RustFS with another S3-compatible storage provider and use managed PostgreSQL/Redis without changing application boundaries.
 
 ## Decisions to revisit with evidence
 

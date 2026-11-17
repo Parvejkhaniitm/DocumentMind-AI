@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     object_storage_endpoint: str = "http://localhost:9000"
     object_storage_bucket: str = "documind"
-    object_storage_access_key: SecretStr = SecretStr("minioadmin")
-    object_storage_secret_key: SecretStr = SecretStr("minioadmin")
+    object_storage_access_key: SecretStr = SecretStr("documind-dev")
+    object_storage_secret_key: SecretStr = SecretStr("documind-local-secret-change-me")
     max_upload_bytes: int = Field(default=20 * 1024 * 1024, gt=0, le=100 * 1024 * 1024)
     max_docx_uncompressed_bytes: int = Field(default=100 * 1024 * 1024, gt=0)
     max_pdf_pages: int = Field(default=500, gt=0, le=5000)
