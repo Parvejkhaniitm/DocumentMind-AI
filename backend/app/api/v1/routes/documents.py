@@ -58,7 +58,7 @@ def _validate_docx(content: bytes) -> None:
         )
     if total_uncompressed_bytes > settings.max_docx_uncompressed_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="DOCX expands beyond the processing limit.",
         )
 
@@ -69,7 +69,7 @@ def _read_upload(upload: UploadFile) -> tuple[str, str, bytes]:
     content = upload.file.read(settings.max_upload_bytes + 1)
     if len(content) > settings.max_upload_bytes:
         raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
             detail="File exceeds the upload size limit.",
         )
 

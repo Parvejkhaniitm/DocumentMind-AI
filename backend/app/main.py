@@ -21,9 +21,7 @@ app.include_router(api_router, prefix=settings.api_v1_prefix)
 app.add_middleware(UploadSizeLimitMiddleware)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()
-    ],
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],

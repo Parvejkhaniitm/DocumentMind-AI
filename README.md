@@ -2,7 +2,7 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 8 frontend foundation. The React app connects to the authenticated API for workspace documents, semantic search, and source-backed conversations.
+> Project status: Day 9 quality pass. The React app connects to the authenticated API, with document handling and API client behavior covered by focused tests.
 
 ## Product goal
 
@@ -18,6 +18,7 @@ A signed-in user can create or join a workspace, upload a document, wait for it 
 - **Day 6:** private conversation history, retrieval-grounded answers through an OpenAI-compatible provider, validated citations, and an explicit insufficient-evidence response.
 - **Day 7:** focused backend unit tests for authentication primitives, chunk boundaries, request validation, retrieval metrics, and citation filtering; development-only test/lint dependencies; and CI checks.
 - **Day 8:** responsive React/Vite frontend with sign-in and registration, workspace switching, document upload/status management, semantic search, and cited conversations.
+- **Day 9:** extraction and upload security coverage for PDF/DOCX limits, plus frontend API client tests for authentication, token refresh, and error handling.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
@@ -72,6 +73,7 @@ Requirements: Python 3.11+ and Docker Compose.
 2. In a second terminal, change to `frontend` and run `npm install`.
 3. Copy `frontend/.env.example` to `frontend/.env` if you need to change the API proxy target. By default the Vite dev server forwards `/api` requests to `http://127.0.0.1:8000`.
 4. Run `npm run dev` and open the local URL printed by Vite (normally `http://127.0.0.1:5173`). For a deployed frontend, set `VITE_API_BASE_URL` to the API origin at build time.
+5. Run `npm test` for the frontend API client tests, `npm run lint` for linting, and `npm run build` to type-check and create the production bundle.
 
 The frontend includes account registration/sign-in, workspace creation and switching, document upload and processing status, retry/delete actions, semantic search, and private conversation history with source citations. Owners and editors can upload files; viewers see a read-only library.
 
@@ -89,7 +91,7 @@ Chunks default to 220 wordpieces with 40 wordpieces of overlap. The roadmap sugg
 
 ## Tests and retrieval evaluation
 
-Install the development extra with `python -m pip install -e "./backend[dev]"`, then run `python -m pytest backend/tests`, `python -m ruff check backend/app backend/tests`, and `python -m ruff format --check backend/app backend/tests`. Embedding libraries are an optional extra so CI and API-only development avoid installing the large model runtime. The unit suite covers security primitives, request validation, chunk boundaries, retrieval metrics, and answer citation validation.
+Install the development extra with `python -m pip install -e "./backend[dev]"`, then run `python -m pytest backend/tests`, `python -m ruff check backend/app backend/tests`, and `python -m ruff format --check backend/app backend/tests`. Embedding libraries are an optional extra so CI and API-only development avoid installing the large model runtime. The unit suite covers security primitives, request validation, upload validation and size limits, PDF/DOCX extraction boundaries, chunk boundaries, retrieval metrics, workspace query scoping, and answer citation validation. Frontend API client tests run from `frontend` with `npm test`.
 
 For a local retrieval benchmark, prepare a private JSONL file with one object per query: `{"workspace_id":"…","query":"…","relevant_chunk_ids":["…"]}`. From `backend`, run `python -m app.scripts.evaluate_retrieval path/to/benchmark.jsonl --top-k 6`. It reports recall@k, MRR, mean latency, p50, and p95. Keep labels and workspace identifiers local; do not commit user document content. No benchmark score or performance claim is included until a representative labeled set is run.
 
