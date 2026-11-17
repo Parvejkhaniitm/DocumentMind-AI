@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     app_name: str = "DocuMind AI API"
     app_version: str = "0.1.0"
     api_v1_prefix: str = "/api/v1"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     database_url: str = "postgresql+psycopg://documind:documind@localhost:5432/documind"
     redis_url: str = "redis://localhost:6379/0"
     object_storage_endpoint: str = "http://localhost:9000"

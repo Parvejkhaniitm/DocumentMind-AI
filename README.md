@@ -2,7 +2,7 @@
 
 A document intelligence platform for teams. Upload PDFs and DOCX files, find relevant passages with semantic search, and ask questions that return answers grounded in cited source pages.
 
-> Project status: Day 7 test and evaluation foundation. Authenticated members can upload and process PDF/DOCX files, search their workspace, and ask document-grounded questions with citations linked to source chunks.
+> Project status: Day 8 frontend foundation. The React app connects to the authenticated API for workspace documents, semantic search, and source-backed conversations.
 
 ## Product goal
 
@@ -17,12 +17,13 @@ A signed-in user can create or join a workspace, upload a document, wait for it 
 - **Day 5:** token-aware overlapping chunks, normalized 384-dimensional embeddings, pgvector storage, semantic search restricted to ready documents in the current workspace, and document reprocessing for reindexing.
 - **Day 6:** private conversation history, retrieval-grounded answers through an OpenAI-compatible provider, validated citations, and an explicit insufficient-evidence response.
 - **Day 7:** focused backend unit tests for authentication primitives, chunk boundaries, request validation, retrieval metrics, and citation filtering; development-only test/lint dependencies; and CI checks.
+- **Day 8:** responsive React/Vite frontend with sign-in and registration, workspace switching, document upload/status management, semantic search, and cited conversations.
 
 See [docs/requirements.md](docs/requirements.md), [docs/architecture.md](docs/architecture.md), [docs/data-model.md](docs/data-model.md), and [docs/api-contracts.md](docs/api-contracts.md).
 
 ## Planned stack
 
-- **Frontend:** React, Vite, Tailwind CSS
+- **Frontend:** React, TypeScript, Vite, responsive CSS
 - **API:** Python, FastAPI, Pydantic, SQLAlchemy 2.x, Alembic
 - **Data:** PostgreSQL with pgvector; Redis and Celery for background jobs
 - **Files:** S3-compatible object storage (MinIO locally)
@@ -65,6 +66,15 @@ Requirements: Python 3.11+ and Docker Compose.
 6. In another terminal, start the worker from `backend`: `python -m celery -A app.core.celery_app:celery_app worker --loglevel=INFO`.
 7. Open `http://127.0.0.1:8000/docs` for the generated API reference. The liveness route is `GET http://127.0.0.1:8000/api/v1/health`.
 
+## Run the frontend locally
+
+1. Start the backend and its required services using the steps above.
+2. In a second terminal, change to `frontend` and run `npm install`.
+3. Copy `frontend/.env.example` to `frontend/.env` if you need to change the API proxy target. By default the Vite dev server forwards `/api` requests to `http://127.0.0.1:8000`.
+4. Run `npm run dev` and open the local URL printed by Vite (normally `http://127.0.0.1:5173`). For a deployed frontend, set `VITE_API_BASE_URL` to the API origin at build time.
+
+The frontend includes account registration/sign-in, workspace creation and switching, document upload and processing status, retry/delete actions, semantic search, and private conversation history with source citations. Owners and editors can upload files; viewers see a read-only library.
+
 Authentication routes live under `/api/v1/auth`; workspace routes live under `/api/v1/workspaces`. The checked-in placeholder `JWT_SECRET` is intentionally rejected. Generate a private secret for local development, and use a secret manager for deployed environments.
 
 The health route reports whether the API process is running. It does not claim that PostgreSQL, Redis, or object storage are ready. Alembic creates users, authentication sessions, workspaces, memberships, document metadata, and extracted source units.
@@ -72,6 +82,8 @@ The health route reports whether the API process is running. It does not claim t
 Uploads are limited to 20 MiB by default. Text-based PDFs retain page references; DOCX text is stored as one source unit because DOCX has no reliable page boundaries. Scanned-PDF OCR remains planned. The embedding model is downloaded from Hugging Face on first indexing/search, so first use needs network access.
 
 Grounded answers require `LLM_API_KEY` and an OpenAI-compatible chat-completions endpoint. Set `LLM_PROVIDER`, `LLM_MODEL`, and `LLM_BASE_URL` in your untracked `.env`; `.env.example` shows the defaults. The API stores each user's conversations separately and checks workspace membership before retrieval. Apply migrations with `python -m alembic -c backend/alembic.ini upgrade head` after pulling updates.
+
+For a separately hosted frontend, set `CORS_ORIGINS` in the backend `.env` to a comma-separated allowlist of its exact origins. Do not use a wildcard for authenticated browser clients.
 
 Chunks default to 220 wordpieces with 40 wordpieces of overlap. The roadmap suggested 500/100, but `all-MiniLM-L6-v2` truncates inputs at 256 wordpieces. Keeping each chunk below the model input limit preserves the full text; chunk size remains an evaluation setting, not a quality claim.
 
